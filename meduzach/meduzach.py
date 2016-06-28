@@ -160,6 +160,9 @@ class Meduzach():
             print('heartbeat...')
             return False
         else:
+            if (response.get('event') == 'abuse_msg' or
+                    response.get('payload', {}).get('event') == 'abuse_msg'):
+                return False
             print("Topic is", response['topic'])
             self.update_messages(response)
             return True
