@@ -33,6 +33,7 @@ class Meduzach():
         self.messages = collections.defaultdict(list)
         self.slowmode = True
         self.users = {}
+        self.is_initialized = False
 
     def _topic_request(self, topic, event='phx_join', payload=None):
         print('creating request for {}, {}'.format(
@@ -190,6 +191,9 @@ class Meduzach():
                         self._heartbeat()
                         chat_updated = self.route_response(self.receive())
                     del self._chats_to_be_updated[chat_id]
+                    if self._chats_to_be_updated_queue.empty():
+                        print("Chat list initialized!")
+                        self.is_initialized = True
             except Exception:
                 if not recover:
                     raise

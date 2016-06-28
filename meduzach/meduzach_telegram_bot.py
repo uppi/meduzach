@@ -5,11 +5,20 @@ import threading
 import re
 import traceback
 import datetime
+import time
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram.contrib.botan import Botan
+from meduzach.credentials import BOT_TOKEN
 
-from meduzach.credentials import BOT_TOKEN, BOTAN_TOKEN
+BOTAN_TOKEN = None
+settings = {"track": True}
+
+try:
+    from meduzach.credentials import BOTAN_TOKEN as bt
+    BOTAN_TOKEN = bt
+except:
+    pass
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -36,7 +45,62 @@ class context:
     readers = collections.defaultdict(lambda: UserState())
     bot = None
     lock = threading.RLock()
-    botan = Botan(BOTAN_TOKEN)
+    track_lock = threading.Lock()
+    botan = Botan(BOTAN_TOKEN) if BOTAN_TOKEN is not None else None
+
+
+def _track(user, action, payload=None):
+    if not settings.get("track", False):
+        return
+    try:
+        if BOTAN_TOKEN is not None:
+            context.botan.track(user, payload, action)
+        with context.track_lock:
+            with open("track.txt", "a") as outf:
+                print(
+                    datetime.datetime.now().strftime("%d/%m/%y_%H:%M"),
+                    user, action, payload, file=outf)
+    except:
+        traceback.print_exc()
+
+
+def _restore_tracked():
+    earliest = datetime.datetime.now() - datetime.timedelta(days=1)
+    try:
+        with open("track.txt") as infile:
+            for line in infile:
+                try:
+                    date, user, action, chat_id = line.split()
+                    if chat_id == "None":
+                        continue
+                    if chat_id not in context.meduzach.chats:
+                        print("chat {} ended".format(chat_id))
+                        continue
+                    user = int(user)
+                    print("so we proceed", action)
+                    is_sub = None
+                    if action == "sub":
+                        is_sub = True
+                    elif action == "unsub":
+                        is_sub = False
+                    if is_sub is None:
+                        continue
+                    print("so we proceed - 2", action)
+                    date = datetime.datetime.strptime(date, "%d/%m/%y_%H:%M")
+                    if date > earliest:
+                        print("date ok")
+                        try:
+                            if is_sub:
+                                print("sub!")
+                                _sub(user, chat_id, False)
+                            else:
+                                _unsub(user, chat_id)
+                        except IndexError:
+                            print("No messages in chat")
+                except:
+                    traceback.print_exc()
+    except:
+        traceback.print_exc()
 
 
 def _format_messages(messages):
@@ -68,6 +132,8 @@ def process_chat_update(chat_id, messages):
 
     Called from meduzach thread.
     """
+    if not context.meduzach.is_initialized:
+        return
     with context.lock:
         short_title = context.meduzach.chats[chat_id]['title']
         if len(short_title) > SHORT_TITLE_LENGTH + 3:
@@ -90,18 +156,20 @@ def process_chat_update(chat_id, messages):
                     context.bot.sendMessage(reader_chat_id, msg)
 
 
-def _sub(reader_id, chat_id):
+def _sub(reader_id, chat_id, send_messages=True):
     """
     Add reader subscription to chat
     """
-    messages = [
-        m for m in context.meduzach.messages[chat_id]
-        if m['inserted_at'] > context.readers[reader_id].unsub_time[chat_id]]
-    if messages:
-        for msg in _format_messages(messages):
-            context.bot.sendMessage(
-                reader_id,
-                text=msg)
+    if send_messages:
+        messages = [
+            m for m in context.meduzach.messages[chat_id]
+            if m['inserted_at'] > context.readers[reader_id].unsub_time[chat_id]]
+        if messages:
+            for msg in _format_messages(messages):
+                context.bot.sendMessage(
+                    reader_id,
+                    text=msg)
+        context.readers[reader_id].latest = chat_id
     context.chats_to_readers[chat_id].append(
         reader_id)
     context.readers[reader_id].chats.append(
@@ -131,6 +199,8 @@ def chats(bot, update):
     with context.lock:
         try:
             reader_id = update.message.chat_id
+            print(context.readers[reader_id])
+            print(context.readers)
             sorted_chats = sorted(
                 list(context.meduzach.chats.items()),
                 key=lambda c: -c[1]['last_message_at'])
@@ -146,11 +216,7 @@ def chats(bot, update):
             bot.sendMessage(reader_id, text=chat_text)
         except:
             traceback.print_exc()
-
-    try:
-        context.botan.track(update.message.chat.id, None, 'chats')
-    except:
-        traceback.print_exc()
+    _track(update.message.chat.id, 'chats')
 
 
 def show_help(bot, update):
@@ -168,10 +234,7 @@ def show_help(bot, update):
     except:
         traceback.print_exc()
 
-    try:
-        context.botan.track(update.message.chat.id, None, 'help')
-    except:
-        traceback.print_exc()
+    _track(update.message.chat.id, 'help')
 
 
 def toggle_subscription(bot, update):
@@ -181,9 +244,10 @@ def toggle_subscription(bot, update):
     /123 command
     """
     action = "?"
+    chat_id = None
+    reader_id = update.message.chat_id
     with context.lock:
         try:
-            reader_id = update.message.chat_id
             match = TOGGLE_SUB_RE.match(update.message.text)
             if match is None:
                 print('"{}"'.format(update.message.text))
@@ -206,10 +270,7 @@ def toggle_subscription(bot, update):
                     action = "sub"
         except:
             traceback.print_exc()
-    try:
-        context.botan.track(update.message.chat.id, action, 'toggle_sub')
-    except:
-        traceback.print_exc()
+    _track(reader_id, action, chat_id)
 
 
 ###
@@ -226,6 +287,10 @@ def run(meduzach, token):
     """
     context.meduzach = meduzach
     context.token = token
+
+    while not meduzach.is_initialized:
+        time.sleep(3)
+    _restore_tracked()
 
     updater = Updater(context.token)
 
