@@ -213,6 +213,7 @@ def run(meduzach, token):
     context.bot = updater.bot
 
     updater.dispatcher.add_handler(CommandHandler('help', show_help), group=0)
+    updater.dispatcher.add_handler(CommandHandler('start', show_help), group=0)
     updater.dispatcher.add_handler(CommandHandler('chats', chats), group=0)
 
     updater.dispatcher.add_handler(
