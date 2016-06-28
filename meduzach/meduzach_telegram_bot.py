@@ -7,8 +7,9 @@ import traceback
 import datetime
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram.contrib.botan import Botan
 
-from meduzach.credentials import BOT_TOKEN
+from meduzach.credentials import BOT_TOKEN, BOTAN_TOKEN
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -35,6 +36,7 @@ class context:
     readers = collections.defaultdict(lambda: UserState())
     bot = None
     lock = threading.RLock()
+    botan = Botan(BOTAN_TOKEN)
 
 
 def _format_messages(messages):
@@ -145,6 +147,11 @@ def chats(bot, update):
         except:
             traceback.print_exc()
 
+    try:
+        context.botan.track(update.message.chat.id, None, 'chats')
+    except:
+        traceback.print_exc()
+
 
 def show_help(bot, update):
     """
@@ -161,6 +168,11 @@ def show_help(bot, update):
     except:
         traceback.print_exc()
 
+    try:
+        context.botan.track(update.message.chat.id, None, 'help')
+    except:
+        traceback.print_exc()
+
 
 def toggle_subscription(bot, update):
     """
@@ -168,6 +180,7 @@ def toggle_subscription(bot, update):
 
     /123 command
     """
+    action = "?"
     with context.lock:
         try:
             reader_id = update.message.chat_id
@@ -182,6 +195,7 @@ def toggle_subscription(bot, update):
                         reader_id,
                         "Вы отписались от /{}".format(chat_id))
                     _unsub(reader_id, chat_id)
+                    action = "unsub"
                 else:
                     bot.sendMessage(
                         reader_id,
@@ -189,8 +203,13 @@ def toggle_subscription(bot, update):
                             chat_id,
                             context.meduzach.chats[chat_id]['key']))
                     _sub(reader_id, chat_id)
+                    action = "sub"
         except:
             traceback.print_exc()
+    try:
+        context.botan.track(update.message.chat.id, action, 'toggle_sub')
+    except:
+        traceback.print_exc()
 
 
 ###
