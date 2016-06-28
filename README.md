@@ -1,6 +1,6 @@
 # Meduzach
 
-Meduzach is a telegram bot for [Meduza](https://meduza.io) chats. It currently supports subscribing to a number of chats and gertting updates in the real time.
+Meduzach is a telegram bot for [Meduza](https://meduza.io) chats. It currently supports subscribing to a number of chats and getting updates in the real time.
 
 It is at an early development stage.
 
@@ -11,6 +11,8 @@ The bot is hosted as [@MeduzachBot](https://telegram.me/meduzachbot)
 The project requires python3.4+.
 
 Call `pip3 install -r requirements.txt` to install required libraries.
+
+Create a file `meduzach/credentials.py` with your own development token.
 
 Call `nosetests` for unit tests (currently broken).
 
