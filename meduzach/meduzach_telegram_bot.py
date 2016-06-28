@@ -142,7 +142,6 @@ def chats(bot, update):
             if not chat_text:
                 chat_text = "Список пуст."
             bot.sendMessage(reader_id, text=chat_text)
-            raise Exception()
         except:
             traceback.print_exc()
 
