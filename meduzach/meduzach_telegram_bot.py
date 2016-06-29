@@ -9,6 +9,9 @@ import time
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram.contrib.botan import Botan
+
+from telegram.error import Unauthorized
+
 from meduzach.credentials import BOT_TOKEN
 
 BOTAN_TOKEN = None
@@ -146,17 +149,23 @@ def process_chat_update(chat_id, messages):
             formatted_messages_h = [header] + formatted_messages
         else:
             formatted_messages_h = [header + formatted_messages[0]]
-        for reader_chat_id in context.chats_to_readers[chat_id]:
+        for reader_id in context.chats_to_readers[chat_id]:
             try:
-                if context.readers[reader_chat_id].latest == chat_id:
+                if context.readers[reader_id].latest == chat_id:
                     for msg in formatted_messages:
-                        context.bot.sendMessage(reader_chat_id, msg)
+                        context.bot.sendMessage(reader_id, msg)
                 else:
-                    context.readers[reader_chat_id].latest = chat_id
+                    context.readers[reader_id].latest = chat_id
                     for msg in formatted_messages_h:
-                        context.bot.sendMessage(reader_chat_id, msg)
+                        context.bot.sendMessage(reader_id, msg)
+            except Unauthorized:
+                print("{} has revoked access, unsub him"
+                      " from everything".format(reader_id))
+                chats = list(context.readers[reader_id].chats)
+                for chat_id_to_unsub in chats:
+                    _unsub(reader_id, chat_id_to_unsub)
             except:
-                print("Trying to send to {}".format(reader_chat_id))
+                print("Trying to send to {}".format(reader_id))
                 traceback.print_exc()
 
 
