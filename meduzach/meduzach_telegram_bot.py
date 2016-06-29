@@ -255,7 +255,7 @@ def toggle_subscription(bot, update):
                 print('"{}"'.format(update.message.text))
                 return
             chat_id = match.group(1)
-            if chat_id in context.chats_to_readers:
+            if chat_id in context.meduzach.chats:
                 if reader_id in context.chats_to_readers[chat_id]:
                     bot.sendMessage(
                         reader_id,
@@ -270,6 +270,10 @@ def toggle_subscription(bot, update):
                             context.meduzach.chats[chat_id]['key']))
                     _sub(reader_id, chat_id)
                     action = "sub"
+            else:
+                bot.sendMessage(
+                    reader_id,
+                    "Чата /{} уже не существует.".format(chat_id))
         except:
             traceback.print_exc()
     _track(reader_id, action, chat_id)
