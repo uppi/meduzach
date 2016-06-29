@@ -156,7 +156,7 @@ def process_chat_update(chat_id, messages):
                     for msg in formatted_messages_h:
                         context.bot.sendMessage(reader_chat_id, msg)
             except:
-                print("Trying to send to {}".format(chat_id))
+                print("Trying to send to {}".format(reader_chat_id))
                 traceback.print_exc()
 
 
