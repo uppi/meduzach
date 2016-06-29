@@ -115,7 +115,7 @@ class Meduzach():
             print(chat_info)
             return
         messages = chat_info['messages']
-
+        print("Messages are real messages when event is", response.get('event'))
         if 'users' in chat_info:
             for user_id, user_info in chat_info['users'].items():
                 self.users[user_id] = user_info
@@ -161,8 +161,9 @@ class Meduzach():
             print('heartbeat...')
             return False
         else:
-            if (response.get('event') == 'abuse_msg' or
-                    response.get('payload', {}).get('event') == 'abuse_msg'):
+            event = response.get('event')
+            if event != 'current_chats' and event != 'new_msg' and event != 'phx_reply':
+                print("event is", event)
                 return False
             print("Topic is", response['topic'])
             self.update_messages(response)

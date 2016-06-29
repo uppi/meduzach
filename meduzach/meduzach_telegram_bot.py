@@ -147,13 +147,17 @@ def process_chat_update(chat_id, messages):
         else:
             formatted_messages_h = [header + formatted_messages[0]]
         for reader_chat_id in context.chats_to_readers[chat_id]:
-            if context.readers[reader_chat_id].latest == chat_id:
-                for msg in formatted_messages:
-                    context.bot.sendMessage(reader_chat_id, msg)
-            else:
-                context.readers[reader_chat_id].latest = chat_id
-                for msg in formatted_messages_h:
-                    context.bot.sendMessage(reader_chat_id, msg)
+            try:
+                if context.readers[reader_chat_id].latest == chat_id:
+                    for msg in formatted_messages:
+                        context.bot.sendMessage(reader_chat_id, msg)
+                else:
+                    context.readers[reader_chat_id].latest = chat_id
+                    for msg in formatted_messages_h:
+                        context.bot.sendMessage(reader_chat_id, msg)
+            except:
+                print("Trying to send to {}".format(chat_id))
+                traceback.print_exc()
 
 
 def _sub(reader_id, chat_id, send_messages=True):
@@ -196,6 +200,8 @@ def chats(bot, update):
 
     /chats command
     """
+    if context.bot != bot:
+        print("ctx and bot")
     with context.lock:
         try:
             reader_id = update.message.chat_id
@@ -225,6 +231,8 @@ def show_help(bot, update):
 
     /help command
     """
+    if context.bot != bot:
+        print("ctx and bot")
     try:
         help_text = ("Список активных чатов: /chats\n"
                      "Чтобы подписаться или отписаться от обновлений чата, "
@@ -245,6 +253,8 @@ def toggle_subscription(bot, update):
 
     /123 command
     """
+    if context.bot != bot:
+        print("ctx and bot")
     action = "?"
     chat_id = None
     reader_id = update.message.chat_id
