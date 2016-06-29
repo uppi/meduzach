@@ -228,7 +228,9 @@ def show_help(bot, update):
     try:
         help_text = ("Список активных чатов: /chats\n"
                      "Чтобы подписаться или отписаться от обновлений чата, "
-                     "нажмите на его номер в списке\n")
+                     "нажмите на его номер в списке.\n\n"
+                     "Если что, пишите @upppi\n"
+                     "https://github.com/uppi/meduzach")
         bot.sendMessage(
             update.message.chat_id, text=help_text)
     except:
