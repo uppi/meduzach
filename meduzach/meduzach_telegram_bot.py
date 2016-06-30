@@ -113,7 +113,6 @@ def _escape_markdown(text):
                 .replace("*", "\\*")
                 .replace("_", "\\_")
                 .replace("[", "\\[")
-                .replace("]", "\\]")
                 .replace("`", "\\`"))
 
 
