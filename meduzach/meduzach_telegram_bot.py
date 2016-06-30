@@ -12,6 +12,8 @@ from telegram.contrib.botan import Botan
 
 from telegram.error import Unauthorized
 
+import telegram
+
 from meduzach.credentials import BOT_TOKEN
 
 BOTAN_TOKEN = None
@@ -106,6 +108,15 @@ def _restore_tracked():
         traceback.print_exc()
 
 
+def _escape_markdown(text):
+    return (text.replace("\\", "\\\\")
+                .replace("*", "\\*")
+                .replace("_", "\\_")
+                .replace("[", "\\[")
+                .replace("]", "\\]")
+                .replace("`", "\\`"))
+
+
 def _format_messages(messages):
     """
     Return a list of telegram messages
@@ -118,12 +129,13 @@ def _format_messages(messages):
     for message in messages:
         author = message["author"]
         text = message["text"]
+        text = _escape_markdown(text)
         reply = message["reply_to"] or ""
         if reply:
             reply = context.meduzach.users.get(reply, "")
         if reply:
-            reply = " @[{}]".format(reply["name"])
-        formatted = "[{}]{} {}".format(author, reply, text)
+            reply = " @_{}_".format(reply["name"])
+        formatted = "*{}*{} {}".format(author, reply, text)
         fmt_size = len(formatted)
         if cur_size + fmt_size < MSG_LIMIT:
             cur_msg.append(formatted)
@@ -160,11 +172,15 @@ def process_chat_update(chat_id, messages):
             try:
                 if context.readers[reader_id].latest == chat_id:
                     for msg in formatted_messages:
-                        context.bot.sendMessage(reader_id, msg)
+                        context.bot.sendMessage(
+                            reader_id, msg,
+                            parse_mode=telegram.ParseMode.MARKDOWN)
                 else:
                     context.readers[reader_id].latest = chat_id
                     for msg in formatted_messages_h:
-                        context.bot.sendMessage(reader_id, msg)
+                        context.bot.sendMessage(
+                            reader_id, msg,
+                            parse_mode=telegram.ParseMode.MARKDOWN)
             except Unauthorized:
                 print("{} has revoked access, unsub him"
                       " from everything".format(reader_id))
@@ -182,13 +198,16 @@ def _sub(reader_id, chat_id, send_messages=True):
     """
     if send_messages:
         messages = [
-            m for m in context.meduzach.messages[chat_id]
-            if m['inserted_at'] > context.readers[reader_id].unsub_time[chat_id]]
+            m
+            for m in context.meduzach.messages[chat_id]
+            if
+            m['inserted_at'] > context.readers[reader_id].unsub_time[chat_id]]
         if messages:
             for msg in _format_messages(messages):
                 context.bot.sendMessage(
                     reader_id,
-                    text=msg)
+                    text=msg,
+                    parse_mode=telegram.ParseMode.MARKDOWN)
         context.readers[reader_id].latest = chat_id
     context.chats_to_readers[chat_id].append(
         reader_id)
