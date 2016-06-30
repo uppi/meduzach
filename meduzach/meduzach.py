@@ -125,7 +125,8 @@ class Meduzach():
                 "author": self.users[messages[msg_id]['user_id']]['name'],
                 "text": messages[msg_id]['message'],
                 "chat_id": messages[msg_id].get('chat_id'),
-                "inserted_at": messages[msg_id].get('inserted_at', 1)  # ??
+                "inserted_at": messages[msg_id].get('inserted_at', 1),  # ??
+                "reply_to": messages[msg_id].get('reply_to_user_id')
             }
             for msg_id in chat_info['messages_ids']
         ]

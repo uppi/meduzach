@@ -116,7 +116,14 @@ def _format_messages(messages):
     cur_msg = []
     cur_size = 0
     for message in messages:
-        formatted = "[{author}] {text}".format(**message)
+        author = message["author"]
+        text = message["text"]
+        reply = message["reply_to"] or ""
+        if reply:
+            reply = context.meduzach.users.get(reply, "")
+        if reply:
+            reply = " @[{}]".format(reply["name"])
+        formatted = "[{}]{} {}".format(author, reply, text)
         fmt_size = len(formatted)
         if cur_size + fmt_size < MSG_LIMIT:
             cur_msg.append(formatted)
