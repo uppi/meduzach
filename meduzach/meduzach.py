@@ -107,15 +107,10 @@ class Meduzach():
         elif 'messages_ids' in response.get('payload', {}):
             chat_info = response['payload']
         else:
-            print("No ids")
             return
-
         if 'messages' not in chat_info:
-            print('Wtf, no messages')
-            print(chat_info)
             return
         messages = chat_info['messages']
-        print("Messages are real messages when event is", response.get('event'))
         if 'users' in chat_info:
             for user_id, user_info in chat_info['users'].items():
                 self.users[user_id] = user_info
@@ -132,9 +127,6 @@ class Meduzach():
         ]
 
         chat_id = chat_info.get('chat_id') or messages[0]['chat_id']
-        if chat_id is None:
-            print("Chat id is none")
-            print(messages)
         chat_id = str(chat_id)
 
         self._emit_chat_update(chat_id, messages)
@@ -163,7 +155,8 @@ class Meduzach():
             return False
         else:
             event = response.get('event')
-            if event != 'current_chats' and event != 'new_msg' and event != 'phx_reply':
+            if (event != 'current_chats' and
+                    event != 'new_msg' and event != 'phx_reply'):
                 print("event is", event)
                 return False
             print("Topic is", response['topic'])
