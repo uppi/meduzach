@@ -100,7 +100,6 @@ class Meduzach():
         self.send(self._topic_request("topic:" + topic))
 
     def update_messages(self, response):
-        print('So we update messages')
         if 'messages_ids' in response.get(
                 'payload', {}).get('response', {}):
             chat_info = response['payload']['response']
@@ -151,15 +150,12 @@ class Meduzach():
             self.update_chats(response)
             return False
         elif response['topic'] == 'phoenix':
-            print('heartbeat...')
             return False
         else:
             event = response.get('event')
             if (event != 'current_chats' and
                     event != 'new_msg' and event != 'phx_reply'):
-                print("event is", event)
                 return False
-            print("Topic is", response['topic'])
             self.update_messages(response)
             return True
 

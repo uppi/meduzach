@@ -11,57 +11,6 @@ class FakeWsFinException(Exception):
     pass
 
 
-fake = [
-    {
-        'topic': 'topic:lobby',
-        'payload': {
-            'chats':
-            {
-                '234': {
-                    'messages_count': 10,
-                    'title': 'Chat 234',
-                    'topic': '/lol/foo'
-                },
-                '345': {
-                    'messages_count': 31,
-                    'title': 'Chat 345',
-                    'topic': '/lol/bar'
-                }
-            },
-            'chats_ids': [
-                '234', '345'
-            ]
-        }
-    },
-    {
-        'topic': 'topic:/lol/qua',
-        'payload': {
-            'response':
-            {
-                'messages': [
-                    {
-                        'user_id': 1,
-                        'message': 'Test message'
-                    },
-                    {
-                        'user_id': 2,
-                        'message': 'Test message 2'
-                    },
-                ],
-                'users': [
-                    {
-                        'id': 1,
-                        'name': 'First'
-                    },
-                    {
-                        'id': 2,
-                        'name': 'Second'
-                    },
-                ]
-            }
-        }}]
-
-
 class FakeWs():
     def __init__(self, fake_results):
         self.fake_results = fake_results
@@ -95,3 +44,46 @@ class TestMeduzach(unittest.TestCase):
                         lambda: FakeWs(examples)):
             with self.assertRaises(FakeWsFinException):
                 m.run(recover=False)
+
+    def test_add_action__emit_update(self):
+        m = Meduzach()
+        calls = []
+
+        m._emit_chat_update(1, "1212")
+
+        self.assertEqual(0, len(calls))
+
+        def _action(chat_id, msgs):
+            calls.append("{}___{}".format(chat_id, msgs))
+
+        m.add_chat_update_action(_action)
+
+        m._emit_chat_update(2, "2323")
+        m._emit_chat_update(3, "34 34")
+
+        self.assertEqual(2, len(calls))
+        self.assertEqual(calls[0], "2___2323")
+        self.assertEqual(calls[1], "3___34 34")
+
+    def test_update_messages(self):
+        m = Meduzach()
+        calls = []
+
+        def _action(chat_id, msgs):
+            for msg in msgs:
+                calls.append("{}___{}".format(chat_id, msg['text']))
+        m.add_chat_update_action(_action)
+
+        m.update_messages(json.loads(examples[6]))
+
+        self.assertEqual(3, len(calls), str(calls))
+        self.assertEqual(calls, [
+            "328___some text",
+            "328___и еще сообщение",
+            "328___пример сообщения"])
+
+    def test_update_chats(self):
+        m = Meduzach()
+        m.update_chats(json.loads(examples[1]))
+        self.assertEqual(18, len(m.chats))
+        self.assertIn('313', m.chats)
