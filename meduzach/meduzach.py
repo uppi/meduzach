@@ -14,8 +14,6 @@ from meduzach.connections import Connector
 HEART_PERIOD = datetime.timedelta(seconds=25)
 
 IGNORED_MESSAGES = [
-    "Поскольку тут никто не пишет, чат закроется через 2 часа"
-    " (если никто за это время не продолжит разговор)",
     "Здесь 8 часов ничего не писали, поэтому чат закрылся. Всем спасибо!"]
 MEDUZA_BOT_NAME = "Meduza Bot"
 
