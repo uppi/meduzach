@@ -147,12 +147,14 @@ def _format_messages(messages):
         yield "\n".join(cur_msg)
 
 
-def process_chat_update(chat_id, messages):
+def process_chat_update(sender, payload):
     """
     Publish new message to all subscriptors.
 
     Called from meduzach thread.
     """
+    chat_id, messages = payload
+
     if not context.meduzach.is_initialized:
         return
     with context.lock:
@@ -362,7 +364,7 @@ def run(meduzach, token):
 def main():
     import meduzach.meduzach as m
     listener = m.Meduzach()
-    listener.add_chat_update_action(process_chat_update)
+    listener.connect('chat_updated', process_chat_update)
 
     listener_thread = threading.Thread(
         target=lambda m: m.run(), args=(listener, ))

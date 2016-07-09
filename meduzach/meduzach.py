@@ -3,12 +3,13 @@
 import json
 import time
 import traceback
-import threading
 import datetime
 import collections
 import queue
 
 import websocket
+
+from meduzach.connections import Connector
 
 HEART_PERIOD = datetime.timedelta(seconds=25)
 
@@ -19,14 +20,14 @@ IGNORED_MESSAGES = [
 MEDUZA_BOT_NAME = "Meduza Bot"
 
 
-class Meduzach():
+class Meduzach(Connector):
     def __init__(self):
+        super().__init__()
         self.addr = ('wss://meduza.io/pond/socket/websocket?token=no_token'
                      '&vsn=1.0.0')
         self._ws = None
         self._ref = 1
         self._heart_time = None
-        self._chat_update_actions = []
         self._chats_to_be_updated = collections.defaultdict(int)
         self._chats_to_be_updated_queue = queue.Queue()
         self.chats = {}
@@ -55,10 +56,7 @@ class Meduzach():
             self._heart_time = datetime.datetime.now()
             self.send(self._topic_request('phoenix', 'heartbeat'))
 
-    def add_chat_update_action(self, action):
-        self._chat_update_actions.append(action)
-
-    def connect(self):
+    def connect_to_server(self):
         self._ws = websocket.WebSocket()
         self._ws.connect(self.addr)
 
@@ -94,7 +92,15 @@ class Meduzach():
                     self._chats_to_be_updated_queue.put(chat_id)
                 self._chats_to_be_updated[chat_id] += msg_update
 
+        old_chats = set(self.chats.keys())
+        new_chats = set(chats.keys())
+
+        removed_chats = old_chats - new_chats
+        added_chats = new_chats - old_chats
+
         self.chats = chats
+        if added_chats or removed_chats:
+            self.emit('chatlist_updated', (added_chats, removed_chats))
 
     def change_topic(self, topic):
         self.send(self._topic_request("topic:" + topic))
@@ -128,17 +134,17 @@ class Meduzach():
         chat_id = chat_info.get('chat_id') or messages[0]['chat_id']
         chat_id = str(chat_id)
 
-        self._emit_chat_update(chat_id, messages)
+        self._store_updated_messages(chat_id, messages)
+        if not self._filter_out_chat_messages(messages):
+            self.emit('chat_updated', (chat_id, messages))
 
+    def _store_updated_messages(self, chat_id, messages):
         self.messages[chat_id] += messages
 
-    def _emit_chat_update(self, chat_id, messages):
-        if (len(messages) == 1 and
+    def _filter_out_chat_messages(self, messages):
+        return (len(messages) == 1 and
                 messages[0]["author"] == MEDUZA_BOT_NAME and
-                messages[0]["text"] in IGNORED_MESSAGES):
-            return
-        for action in self._chat_update_actions:
-            action(chat_id, messages)
+                messages[0]["text"] in IGNORED_MESSAGES)
 
     def close(self):
         if self._ws is not None:
@@ -162,7 +168,7 @@ class Meduzach():
     def run(self, recover=True):
         while True:
             try:
-                self.connect()
+                self.connect_to_server()
 
                 while True:
                     while self._chats_to_be_updated_queue.empty():
@@ -206,8 +212,7 @@ def publish(chat_id, messages):
 
 def main():
     listener = Meduzach()
-    listener.add_chat_update_action(
-        lambda chat_id, messages: publish(chat_id, messages))
+    listener.connect('chat_updated', lambda sender, payload: publish(*payload))
     listener.run()
 
 if __name__ == '__main__':

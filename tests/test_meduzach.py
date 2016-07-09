@@ -49,17 +49,18 @@ class TestMeduzach(unittest.TestCase):
         m = Meduzach()
         calls = []
 
-        m._emit_chat_update(1, "1212")
+        m.emit('chat_updated', (1, "1212"))
 
         self.assertEqual(0, len(calls))
 
-        def _action(chat_id, msgs):
+        def _action(sender, payload):
+            chat_id, msgs = payload
             calls.append("{}___{}".format(chat_id, msgs))
 
-        m.add_chat_update_action(_action)
+        m.connect('chat_updated', _action)
 
-        m._emit_chat_update(2, "2323")
-        m._emit_chat_update(3, "34 34")
+        m.emit('chat_updated', (2, "2323"))
+        m.emit('chat_updated', (3, "34 34"))
 
         self.assertEqual(2, len(calls))
         self.assertEqual(calls[0], "2___2323")
@@ -69,10 +70,11 @@ class TestMeduzach(unittest.TestCase):
         m = Meduzach()
         calls = []
 
-        def _action(chat_id, msgs):
+        def _action(sender, payload):
+            chat_id, msgs = payload
             for msg in msgs:
                 calls.append("{}___{}".format(chat_id, msg['text']))
-        m.add_chat_update_action(_action)
+        m.connect('chat_updated', _action)
 
         m.update_messages(json.loads(examples[6]))
 
