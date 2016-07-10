@@ -14,7 +14,7 @@ Call `pip3 install -r requirements.txt` to install required libraries.
 
 Create a file `meduzach/credentials.py` with your own development token.
 
-Call `nosetests` for unit tests (currently broken).
+Call `nosetests` for unit tests.
 
 ## TODO
 
